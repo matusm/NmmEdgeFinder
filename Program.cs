@@ -109,7 +109,7 @@ namespace NmmEdgeFinder
                 laserY = nmmScanData.ExtractProfile("LY", 0, TopographyProcessType.ForwardOnly);
                 for (int i = 1; i < segmentedField.Length; i++)
                     if (segmentedField[i - 1] + segmentedField[i] == 1)
-                        edgePoints.Add(new EdgePoint(laserX[i], laserY[i], i));
+                        edgePoints.Add(new EdgePoint(laserX[i], laserY[i], i, ScanDirection.Forward));
             }
             // find edges in the backward scan (if present)
             if (ProcessBwScan())
@@ -120,7 +120,7 @@ namespace NmmEdgeFinder
                 laserY = nmmScanData.ExtractProfile("LY", 0, TopographyProcessType.BackwardOnly);
                 for (int i = 1; i < segmentedField.Length; i++)
                     if (segmentedField[i - 1] + segmentedField[i] == 1)
-                        edgePoints.Add(new EdgePoint(laserX[i], laserY[i], -i));
+                        edgePoints.Add(new EdgePoint(laserX[i], laserY[i], i, ScanDirection.Backward));
             }
             ConsoleUI.Done();
 
