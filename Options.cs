@@ -6,7 +6,7 @@ namespace NmmEdgeFinder
 {
     class Options
     {
-        [Option('t', "threshold", DefaultValue = 0.5, HelpText = "Threshold for segmentation. For -X option only")]
+        [Option('t', "threshold", DefaultValue = 0.5, HelpText = "Threshold for segmentation.")]
         public double Threshold { get; set; }
 
         [Option('c', "channel", DefaultValue = "AX", HelpText = "Channel to analyze.")]
@@ -14,6 +14,12 @@ namespace NmmEdgeFinder
 
         [Option('s', "scan", DefaultValue = 0, HelpText = "Scan index for multi-scan files.")]
         public int ScanIndex { get; set; }
+
+        [Option('f', "forwardOnly", HelpText = "Use forward scan data only.")]
+        public bool FwOnly { get; set; }
+
+        [Option('b', "backwardOnly", HelpText = "Use backward scan data only (if present).")]
+        public bool BwOnly { get; set; }
 
         [Option('q', "quiet", HelpText = "Quiet mode. No screen output (except for errors).")]
         public bool BeQuiet { get; set; }
@@ -37,7 +43,7 @@ namespace NmmEdgeFinder
                 AdditionalNewLineAfterOption = false,
                 AddDashesToOption = true
             };
-            string sPre = "Program to find edges in the intensity channel of scanning files by SIOS NMM-1. " +
+            string sPre = "Program to find edges in the intensity channel of scanning files produced by the SIOS NMM-1. " +
                 "The quadruple of files (dat ind dsc pos) are analyzed to obtain the required parameters. " +
                 "x and y coordinates of detected edges are output to a csv file.";
             help.AddPreOptionsLine(sPre);

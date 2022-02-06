@@ -13,30 +13,35 @@ namespace NmmEdgeFinder
 {
     class Program
     {
-        private const int edgeCode = 1;
-        private const int noEdgeCode = 0;
-
         static void Main(string[] args)
         {
-            
-
+ 
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 
             // parse command line arguments
             var options = new Options();
             if (!CommandLine.Parser.Default.ParseArgumentsStrict(args, options))
                 Console.WriteLine("*** ParseArgumentsStrict returned false");
+            
             // consume the verbosity option
             if (options.BeQuiet == true)
                 ConsoleUI.BeSilent();
             else
                 ConsoleUI.BeVerbatim();
             ConsoleUI.Welcome();
+           
+            // forward only and backward only does not make sense
+            if(options.FwOnly&&options.BwOnly)
+            {
+                options.FwOnly = false;
+                options.BwOnly = false;
+            }
 
             // get the filename(s)
             string[] fileNames = options.ListOfFileNames.ToArray();
             if (fileNames.Length == 0)
                 ConsoleUI.ErrorExit("!Missing input file name", 1);
+            
             // read all relevant scan data
             ConsoleUI.StartOperation("Reading NMM scan files");
             NmmFileName nmmFileName = new NmmFileName(fileNames[0]);
@@ -69,13 +74,24 @@ namespace NmmEdgeFinder
             Classifier classifier;
             IntensityEvaluator eval;
             double[] luminanceField;
+            double[] luminanceFieldFw;
+            double[] luminanceFieldBw;
             double[] laserX;
             double[] laserY;
             int[] segmentedField;
 
             // evaluate the intensities for ALL profiles == the whole scan field
             ConsoleUI.StartOperation("Classifying intensity data");
-            luminanceField = nmmScanData.ExtractProfile(options.ChannelSymbol, 0, TopographyProcessType.ForwardOnly);
+            luminanceFieldFw = nmmScanData.ExtractProfile(options.ChannelSymbol, 0, TopographyProcessType.ForwardOnly);
+            luminanceFieldBw = nmmScanData.ExtractProfile(options.ChannelSymbol, 0, TopographyProcessType.BackwardOnly);
+            if (BwScanPresent())
+            {
+                luminanceField = luminanceFieldFw.Concat(luminanceFieldBw).ToArray();
+            }
+            else
+            {
+                luminanceField = luminanceFieldFw;
+            }
             eval = new IntensityEvaluator(luminanceField);
             ConsoleUI.Done();
             ConsoleUI.WriteLine($"Intensity range from {eval.MinIntensity} to {eval.MaxIntensity}");
@@ -83,21 +99,22 @@ namespace NmmEdgeFinder
             double relativeSpan = (double)(eval.UpperBound - eval.LowerBound) / (double)(eval.MaxIntensity - eval.MinIntensity) * 100.0;
             ConsoleUI.WriteLine($"({relativeSpan:F1} % of full range)");
 
-            ConsoleUI.StartOperation("Searching edges");
             // find edges in the forward scan
-            classifier = new Classifier(luminanceField);
-            segmentedField = classifier.GetSegmentedProfile(options.Threshold, eval.LowerBound, eval.UpperBound);
-            laserX = nmmScanData.ExtractProfile("LX", 0, TopographyProcessType.ForwardOnly);
-            laserY = nmmScanData.ExtractProfile("LY", 0, TopographyProcessType.ForwardOnly);
-            for (int i = 1; i < segmentedField.Length; i++)
-                if (segmentedField[i - 1] + segmentedField[i] == 1)
-                    edgePoints.Add(new EdgePoint(laserX[i], laserY[i], i));
-
-            // find edges in the backward scan (if present)
-            if (nmmScanData.MetaData.ScanStatus == ScanDirectionStatus.ForwardAndBackward || nmmScanData.MetaData.ScanStatus == ScanDirectionStatus.ForwardAndBackwardJustified)
+            ConsoleUI.StartOperation("Searching edges");
+            if (ProcessFwScan())
             {
-                luminanceField = nmmScanData.ExtractProfile(options.ChannelSymbol, 0, TopographyProcessType.BackwardOnly);
-                classifier = new Classifier(luminanceField);
+                classifier = new Classifier(luminanceFieldFw);
+                segmentedField = classifier.GetSegmentedProfile(options.Threshold, eval.LowerBound, eval.UpperBound);
+                laserX = nmmScanData.ExtractProfile("LX", 0, TopographyProcessType.ForwardOnly);
+                laserY = nmmScanData.ExtractProfile("LY", 0, TopographyProcessType.ForwardOnly);
+                for (int i = 1; i < segmentedField.Length; i++)
+                    if (segmentedField[i - 1] + segmentedField[i] == 1)
+                        edgePoints.Add(new EdgePoint(laserX[i], laserY[i], i));
+            }
+            // find edges in the backward scan (if present)
+            if (ProcessBwScan())
+            {
+                classifier = new Classifier(luminanceFieldBw);
                 segmentedField = classifier.GetSegmentedProfile(options.Threshold, eval.LowerBound, eval.UpperBound);
                 laserX = nmmScanData.ExtractProfile("LX", 0, TopographyProcessType.BackwardOnly);
                 laserY = nmmScanData.ExtractProfile("LY", 0, TopographyProcessType.BackwardOnly);
@@ -109,6 +126,21 @@ namespace NmmEdgeFinder
 
             ExportEdgeAsCsv();
 
+            bool ProcessFwScan()
+            {
+                return !options.BwOnly;
+            }
+
+            bool ProcessBwScan()
+            {
+                return (BwScanPresent() && !options.FwOnly);
+            }
+
+            bool BwScanPresent()
+            {
+                return (nmmScanData.MetaData.ScanStatus == ScanDirectionStatus.ForwardAndBackward || nmmScanData.MetaData.ScanStatus == ScanDirectionStatus.ForwardAndBackwardJustified);
+            }
+
             // very dirty implementation of the CSV file writer for the edge points
             void ExportEdgeAsCsv()
             {
@@ -117,9 +149,13 @@ namespace NmmEdgeFinder
                 {
                     StreamWriter hCsvFile = File.CreateText(csvFileName);
                     ConsoleUI.WritingFile(csvFileName);
-                    hCsvFile.WriteLine($"# Threshold         = {options.Threshold:F2}");
-                    hCsvFile.WriteLine($"# Comment           = {options.UserComment}");
-                    hCsvFile.WriteLine($"# SampleTemperature = {nmmScanData.MetaData.SampleTemperature:F3}");
+                    hCsvFile.WriteLine($"# {ConsoleUI.Title} v{ConsoleUI.Version}");
+                    hCsvFile.WriteLine($"# Threshold          = {options.Threshold:F2}");
+                    hCsvFile.WriteLine($"# Comment            = {options.UserComment}");
+                    hCsvFile.WriteLine($"# SampleTemperature  = {nmmScanData.MetaData.SampleTemperature:F3}");
+                    hCsvFile.WriteLine($"# Forward scan used  = {ProcessFwScan()}");
+                    hCsvFile.WriteLine($"# Backward scan used = {ProcessBwScan()}");
+                    hCsvFile.WriteLine($"# Number of points   = {edgePoints.Count}");
                     hCsvFile.WriteLine("x_global , y_global"); 
                     hCsvFile.WriteLine("m , m");
                     foreach (var ep in edgePoints)
@@ -134,10 +170,6 @@ namespace NmmEdgeFinder
                     // file problem, just ignore
                 }
             }
-
-
-
-
 
         }
     }

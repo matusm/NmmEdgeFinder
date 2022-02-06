@@ -15,11 +15,11 @@ namespace NmmEdgeFinder
 
         public int[] GetSegmentedProfile(double threshold, int lower, int upper)
         {
-            int intThreshold = (int)((upper - lower) * threshold) + lower;
+            int absThreshold = (int)((upper - lower) * threshold) + lower;
             int[] segmented = new int[intensity.Length];
             for (int i = 0; i < segmented.Length; i++)
             {
-                if (intensity[i] > intThreshold)
+                if (intensity[i] > absThreshold)
                     segmented[i] = 1;
                 else
                     segmented[i] = 0;
