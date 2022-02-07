@@ -1,6 +1,6 @@
 ﻿namespace NmmEdgeFinder
 {
-    public struct EdgePoint
+    public class EdgePoint
     {
         public double X { get; }
         public double Y { get; }
