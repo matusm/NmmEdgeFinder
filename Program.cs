@@ -13,47 +13,45 @@ namespace NmmEdgeFinder
     {
         static void Main(string[] args)
         {
- 
+
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 
-            // parse command line arguments
+            // Parse command line arguments.
             var options = new Options();
             if (!CommandLine.Parser.Default.ParseArgumentsStrict(args, options))
                 Console.WriteLine("*** ParseArgumentsStrict returned false");
-            
-            // consume the verbosity option
             if (options.BeQuiet == true)
                 ConsoleUI.BeSilent();
             else
                 ConsoleUI.BeVerbatim();
             ConsoleUI.Welcome();
-           
-            // forward only and backward only does not make sense
-            if(options.FwOnly&&options.BwOnly)
+
+            // Forward-only and backward-only does not make sense.
+            if (options.FwOnly && options.BwOnly)
             {
                 options.FwOnly = false;
                 options.BwOnly = false;
             }
 
-            // get the filename(s)
+            // Get the filename(s).
             string[] fileNames = options.ListOfFileNames.ToArray();
             if (fileNames.Length == 0)
                 ConsoleUI.ErrorExit("!Missing input file name", 1);
-            
-            // read all relevant scan data
+
+            // Read all relevant scan data.
             ConsoleUI.StartOperation("Reading NMM scan files");
             NmmFileName nmmFileName = new NmmFileName(fileNames[0]);
             nmmFileName.SetScanIndex(options.ScanIndex);
             NmmScanData nmmScanData = new NmmScanData(nmmFileName);
             ConsoleUI.Done();
 
-            // check if data present
+            // Check if data present.
             if (nmmScanData.MetaData.ScanStatus == ScanDirectionStatus.Unknown)
                 ConsoleUI.ErrorExit("!Unknown scan type", 5);
             if (nmmScanData.MetaData.ScanStatus == ScanDirectionStatus.NoData)
                 ConsoleUI.ErrorExit("!No scan data present", 6);
 
-            // Check if requested channels are present in raw data
+            // Check if requested channels are present in raw data.
             if (!nmmScanData.ColumnPresent(options.ChannelSymbol))
                 ConsoleUI.ErrorExit($"!Requested channel {options.ChannelSymbol} not in data files", 2);
             if (!nmmScanData.ColumnPresent("LX"))
@@ -61,10 +59,10 @@ namespace NmmEdgeFinder
             if (!nmmScanData.ColumnPresent("LY"))
                 ConsoleUI.ErrorExit($"!Channel {"LY"} not in data files", 4);
 
-            // some screen output
+            // Some screen output.
             ConsoleUI.WriteLine($"SpuriousDataLines: {nmmScanData.MetaData.SpuriousDataLines}");
             ConsoleUI.WriteLine($"NumberOfGlitchedDataPoints: {nmmScanData.MetaData.NumberOfGlitchedDataPoints}");
-            ConsoleUI.WriteLine($"{nmmScanData.MetaData.NumberOfDataPoints*nmmScanData.MetaData.NumberOfProfiles} data lines with {nmmScanData.MetaData.NumberOfColumnsInFile} channels, organized in {nmmScanData.MetaData.NumberOfProfiles} profiles");
+            ConsoleUI.WriteLine($"{nmmScanData.MetaData.NumberOfDataPoints * nmmScanData.MetaData.NumberOfProfiles} data lines with {nmmScanData.MetaData.NumberOfColumnsInFile} channels, organized in {nmmScanData.MetaData.NumberOfProfiles} profiles");
             ConsoleUI.WriteLine($"z-axis channel: {options.ChannelSymbol}");
             ConsoleUI.WriteLine($"Threshold: {options.Threshold}");
 
@@ -78,7 +76,7 @@ namespace NmmEdgeFinder
             double[] laserY;
             int[] segmentedField;
 
-            // evaluate the intensities for ALL profiles == the whole scan field
+            // Evaluate the intensities for ALL profiles == the whole scan field.
             ConsoleUI.StartOperation("Classifying intensity data");
             luminanceFieldFw = nmmScanData.ExtractProfile(options.ChannelSymbol, 0, TopographyProcessType.ForwardOnly);
             luminanceFieldBw = nmmScanData.ExtractProfile(options.ChannelSymbol, 0, TopographyProcessType.BackwardOnly);
@@ -96,7 +94,7 @@ namespace NmmEdgeFinder
             ConsoleUI.WriteLine($"Estimated bounds from {eval.LowerBound} to {eval.UpperBound}");
             ConsoleUI.WriteLine($"({eval.RelativeSpanPercent:F1} % of full range)");
 
-            // find edges in the forward scan
+            // Find edges in the forward scan.
             ConsoleUI.StartOperation("Searching edges");
             if (ProcessFwScan())
             {
@@ -108,7 +106,7 @@ namespace NmmEdgeFinder
                     if (segmentedField[i - 1] + segmentedField[i] == 1)
                         edgePoints.Add(new EdgePoint(laserX[i], laserY[i], i, ScanDirection.Forward));
             }
-            // find edges in the backward scan (if present)
+            // Find edges in the backward scan (if present).
             if (ProcessBwScan())
             {
                 classifier = new Classifier(luminanceFieldBw);
@@ -138,7 +136,7 @@ namespace NmmEdgeFinder
                 return (nmmScanData.MetaData.ScanStatus == ScanDirectionStatus.ForwardAndBackward || nmmScanData.MetaData.ScanStatus == ScanDirectionStatus.ForwardAndBackwardJustified);
             }
 
-            // very dirty implementation of the CSV file writer for the edge points
+            // Very dirty implementation of the CSV file writer for the edge points.
             void ExportEdgeAsCsv()
             {
                 string csvFileName = nmmFileName.GetFreeFileNameWithIndex("csv");
@@ -153,7 +151,7 @@ namespace NmmEdgeFinder
                     hCsvFile.WriteLine($"# Forward scan used  = {ProcessFwScan()}");
                     hCsvFile.WriteLine($"# Backward scan used = {ProcessBwScan()}");
                     hCsvFile.WriteLine($"# Number of points   = {edgePoints.Count}");
-                    hCsvFile.WriteLine("x_global , y_global"); 
+                    hCsvFile.WriteLine("x_global , y_global");
                     hCsvFile.WriteLine("m , m");
                     foreach (var ep in edgePoints)
                     {
