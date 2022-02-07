@@ -66,7 +66,7 @@ namespace NmmEdgeFinder
             // some screen output
             ConsoleUI.WriteLine($"SpuriousDataLines: {nmmScanData.MetaData.SpuriousDataLines}");
             ConsoleUI.WriteLine($"NumberOfGlitchedDataPoints: {nmmScanData.MetaData.NumberOfGlitchedDataPoints}");
-            ConsoleUI.WriteLine($"{nmmScanData.MetaData.NumberOfDataPoints} data lines with {nmmScanData.MetaData.NumberOfColumnsInFile} channels, organized in {nmmScanData.MetaData.NumberOfProfiles} profiles");
+            ConsoleUI.WriteLine($"{nmmScanData.MetaData.NumberOfDataPoints*nmmScanData.MetaData.NumberOfProfiles} data lines with {nmmScanData.MetaData.NumberOfColumnsInFile} channels, organized in {nmmScanData.MetaData.NumberOfProfiles} profiles");
             ConsoleUI.WriteLine($"z-axis channel: {options.ChannelSymbol}");
             ConsoleUI.WriteLine($"Threshold: {options.Threshold}");
 
@@ -148,7 +148,7 @@ namespace NmmEdgeFinder
                 {
                     StreamWriter hCsvFile = File.CreateText(csvFileName);
                     ConsoleUI.WritingFile(csvFileName);
-                    hCsvFile.WriteLine($"# {ConsoleUI.Title} v{ConsoleUI.Version}");
+                    hCsvFile.WriteLine($"# {ConsoleUI.Title} v{ConsoleUI.FullVersion}");
                     hCsvFile.WriteLine($"# Threshold          = {options.Threshold:F2}");
                     hCsvFile.WriteLine($"# Comment            = {options.UserComment}");
                     hCsvFile.WriteLine($"# SampleTemperature  = {nmmScanData.MetaData.SampleTemperature:F3}");
