@@ -1,6 +1,6 @@
 ﻿namespace NmmEdgeFinder
 {
-    public class EdgePoint
+    public struct EdgePoint
     {
         public double X { get; }
         public double Y { get; }
@@ -13,6 +13,11 @@
             this.Y = Y;
             this.DatIndex = DatIndex;
             this.Direction = Direction;
+        }
+
+        public override string ToString()
+        {
+            return $"[EdgePoint: X={X} Y={Y} DatIndex={DatIndex} Direction={Direction}]";
         }
     }
 
