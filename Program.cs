@@ -96,8 +96,7 @@ namespace NmmEdgeFinder
             ConsoleUI.Done();
             ConsoleUI.WriteLine($"Intensity range from {eval.MinIntensity} to {eval.MaxIntensity}");
             ConsoleUI.WriteLine($"Estimated bounds from {eval.LowerBound} to {eval.UpperBound}");
-            double relativeSpan = (double)(eval.UpperBound - eval.LowerBound) / (double)(eval.MaxIntensity - eval.MinIntensity) * 100.0;
-            ConsoleUI.WriteLine($"({relativeSpan:F1} % of full range)");
+            ConsoleUI.WriteLine($"({eval.RelativeSpanPercent:F1} % of full range)");
 
             // find edges in the forward scan
             ConsoleUI.StartOperation("Searching edges");

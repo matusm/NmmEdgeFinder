@@ -34,6 +34,7 @@ namespace NmmEdgeFinder
         public int MinIntensity => minIntensity;
         public int LowerBound => lowerBound;
         public int UpperBound => upperBound;
+        public double RelativeSpanPercent => 100.0 * (UpperBound - LowerBound) / (MaxIntensity - MinIntensity);
         public int[] Histogram { get; private set; }
 
         // local fields are necessary
